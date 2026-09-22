@@ -1,5 +1,7 @@
 /.venv/
 /data/
+/output/
+/backup/
 
 # Python-generated files
 __pycache__/

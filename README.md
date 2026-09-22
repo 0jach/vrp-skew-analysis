@@ -1,26 +1,60 @@
-# VRP and Skew Analysis
+# SPX volatility risk premium and downside skew
 
-Work in progress on when selling SPX volatility is attractive, and when a high volatility risk premium is mainly compensation for downside tail risk.
+This project asks whether downside implied-volatility skew changes the relation
+between the ex-ante volatility risk premium and subsequent volatility outcomes.
 
-## Current state
+For every SPX date it constructs:
 
-The project currently includes:
+```text
+skew = 30-day 25-delta put IV - 30-day 50-delta call IV
+EVRP = ATM IV² - forecast realized volatility²
+ex-post VRP = ATM IV² - subsequent realized volatility²
+```
 
-- basic parsing and filtering of SPX option and return data;
-- 30-day ATM implied volatility and 25-delta put skew measures;
-- weekly, forward 30-day realized-volatility labels;
-- historical 14-, 30-, and 60-day realized-volatility features;
-- a weekly modelling dataset joining the option data, features, and target;
-- exploratory plots of implied volatility and skew.
+Volatilities use decimal units and 252-day annualization. Subsequent realized
+volatility is measured over `(t, t+30 calendar days]`.
 
-The data pipeline and methodology are still being developed, so the current outputs should not be treated as final research results.
+The pipeline compares historical RV, EWMA, and expanding HAR forecasts. The
+main empirical specification deliberately uses trailing historical RV as the
+simple forecast benchmark. It produces an independent 3×3 EVRP/skew sort and
+interaction regressions with 22-lag Newey-West standard errors.
 
-## Next step
+## Expected data
 
-Use past 30-day realized volatility as the first forecast of future 30-day realized volatility. Evaluate it with MAE and RMSE, then use the forecast to calculate the ex-ante volatility risk premium.
+The project assumes these files and columns are already correct:
 
-## Final goal
+- `data/flsssc4rjnjlhwsk.csv`: `date`, `secid`, `days`, `delta`,
+  `impl_volatility`, `cp_flag`;
+- `data/spxReturn.csv`: `date`, `close`, `return`.
 
-The goal is to estimate the ex-ante volatility risk premium using a real-time forecast of future realized volatility, then test whether downside skew helps distinguish attractive short-volatility opportunities from regimes with elevated crash risk.
+The option file must contain exact 30-day, 50-delta call and −25-delta put
+surface nodes. There is intentionally no configurable schema or interpolation
+layer.
 
-The finished project should include walk-forward volatility forecasts, VRP/skew regime analysis, and a transaction-cost-aware SPX option backtest, with emphasis on both returns and tail risk.
+The surface does not contain tradable option-price histories, so the project
+does not calculate delta-hedged straddle returns or strategy performance.
+
+## Run
+
+```bash
+python -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+.venv/bin/python scripts/run_pipeline.py
+.venv/bin/python -m pytest
+```
+
+Generated datasets, tables, and figures are written under `data/processed/`
+and `output/`.
+
+## Code map
+
+```text
+src/vrp/data.py       fixed input loading and exact IV-node extraction
+src/vrp/features.py   realized volatility, EVRP, and ex-post VRP
+src/vrp/forecasts.py  historical, EWMA, and leakage-safe HAR forecasts
+src/vrp/analysis.py   3×3 sorts and HAC interaction regressions
+src/vrp/plots.py      the four research figures
+src/vrp/pipeline.py   end-to-end orchestration and output writing
+scripts/run_pipeline.py
+tests/test_core.py
+```
