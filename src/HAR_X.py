@@ -55,9 +55,7 @@ def compute_har_x_rv(
         ):
             continue
 
-        coefficients = np.linalg.lstsq(
-            cumulative_xx[training_end], cumulative_xy[training_end], rcond=None
-        )[0]
+        coefficients = np.linalg.lstsq(cumulative_xx[training_end], cumulative_xy[training_end], rcond=None)[0]
         prediction = x[position] @ coefficients
         forecast.iloc[position] = np.sqrt(max(prediction, 0.0))
 

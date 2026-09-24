@@ -41,18 +41,26 @@ volatility["ev_rp"].describe(percentiles=[
 cols = ["date", "ev_rp", "atm_iv_30d", "rv_t+30"]
 volatility.nsmallest(30, "ev_rp")[cols]
 
-plt.plot(volatility["date"], volatility["atm_iv_30d"])
+plt.plot(volatility["date"], volatility["ev_rp"])
 plt.ylabel("EV RP")
 plt.xlabel("Date")
-plt.plot(volatility["date"], volatility["rv_t+30"]-volatility["actual_rv_t+30"])
+plt.plot(volatility["date"], volatility["rv_t+30"])
 plt.show()
 
 # interpretation: period of crisis like 2008 can lead to expected rv being extremely higher that IV, so that EVPR is negative up to less that 100%.
 # HAR as a predictor tends to predict high volatility for a long time after a shock / crisis. this makes the EVPR go negative.
 # We can analyse the error distrubutions given skew.
+# %%
+har_error = (volatility[["date", "rv_t+30", "actual_rv_t+30", "skew"]].dropna().set_index("date").copy())
+har_error["moving_mean_skew"] = har_error["skew"].rolling(
+    "30D", closed="left"
+).mean()
+
+plt.plot(har_error.index, har_error["moving_mean_skew"])
+plt.show()
+
 
 # %%
-har_error = volatility[["rv_t+30", "actual_rv_t+30", "skew"]].dropna().copy()
 har_error["error"] = har_error["rv_t+30"] - har_error["actual_rv_t+30"]
 har_error["skew_group"] = pd.qcut(
     har_error["skew"],
